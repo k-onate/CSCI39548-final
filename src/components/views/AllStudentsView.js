@@ -5,6 +5,7 @@ The Views component is responsible for rendering web page with data provided by 
 It constructs a React component to display the all students view page.
 ================================================== */
 import { Link } from "react-router-dom";
+//import '../../styles/globalStyles.css';
 
 const AllStudentsView = (props) => {
   const {students, deleteStudent} = props;
@@ -20,9 +21,9 @@ const AllStudentsView = (props) => {
     );
   }
   
-  // If there is at least one student, render All Students view 
+  // If there is at least one student, show all the students + profile picture
   return (
-    <div>
+    <div className = "all-students-container">
       <h1>All Students</h1>
 
       {students.map((student) => {
@@ -30,15 +31,19 @@ const AllStudentsView = (props) => {
           return (
             <div key={student.id}>
               <Link to={`/student/${student.id}`}>
-                <h2>{name}</h2>
+                <h2 className = "name-link">{name}</h2>
               </Link>
-              <button onClick={() => deleteStudent(student.id)}>Delete</button>
+              <img src={student.profilePhoto}
+              alt={`${student.firstname} ${student.lastname}`}
+              style={{ width: '150px', height: '150px', objectFit: 'cover' }}
+              />
+              <br/>
+              <button onClick={() => deleteStudent(student.id)}>Delete Student</button>
               <hr/>
             </div>
           );
         }
       )}
-      <br/>
       <Link to={`/newstudent`}>
         <button>Add New Student</button>
       </Link>

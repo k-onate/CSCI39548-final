@@ -9,22 +9,34 @@ import Header from './Header';
 import { Component } from 'react';
 import { connect } from 'react-redux';
 import { Redirect } from 'react-router-dom';
+import PropTypes from "prop-types";
 
 import NewStudentView from '../views/NewStudentView';
-import { addStudentThunk } from '../../store/thunks';
+import { addStudentThunk, fetchAllCampusesThunk, checkEmailExistsThunk } from '../../store/thunks';
 
 class NewStudentContainer extends Component {
-  // Initialize state
+  //initialization
   constructor(props){
     super(props);
+    const { state } = this.props.location || {};
     this.state = {
       firstname: "", 
       lastname: "", 
-      campusId: null, 
+      email: "",
+      gpa: "",
+      campusId: state ? state.campusId : "",
+      profilePhoto: "",
       redirect: false, 
-      redirectId: null
+      redirectId: null,
+      errors: {}
     };
   }
+
+    //retrives data from back end
+    componentDidMount() {
+      console.log(this.props);
+      this.props.fetchAllCampuses();
+    }
 
   // Capture input data when it is entered
   handleChange = event => {
@@ -33,26 +45,76 @@ class NewStudentContainer extends Component {
     });
   }
 
+    //is email taken
+    checkEmailExists = async (email) => {
+      const emailExists = await this.props.checkEmailExists(email);
+      return emailExists;
+    }
+
   // Take action after user click the submit button
   handleSubmit = async event => {
     event.preventDefault();  // Prevent browser reload/refresh after submit.
 
+    const { 
+      firstname, 
+      lastname, 
+      email, 
+      gpa, 
+      campusId, 
+      profilePhoto 
+    } = this.state;
+
+    let errors = {};
+
+    if (!firstname) errors.firstname = "First name is required.";
+    if (!lastname) errors.lastname = "Last name is required.";
+    if (!email || !/\S+@\S+\.\S+/.test(email)) errors.email = "Please enter a valid email address.";
+    if (!campusId) errors.campusId = "Please select a campus.";
+    if (!gpa || isNaN(gpa) || gpa < 0 || gpa > 4) errors.gpa = "Please enter a valid GPA between 0 and 4.";
+
+     const emailExists = await this.checkEmailExists(email);
+     if (emailExists) {
+       errors.email = "Email already exists.";
+     }
+
+     //checks if URL is valid
+    const urlPattern = /^(https?:\/\/.*\.(?:png|jpg|jpeg|gif|webp|svg))(?:\?.*)?$/i;
+    if (profilePhoto.trim() && !urlPattern.test(profilePhoto.trim()) && profilePhoto.trim() !== "/blankprofile.jpg" && profilePhoto.trim() !== "") {
+      errors.profilePhoto = "The provided student photo URL is invalid.";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      this.setState({ errors });
+      return;
+    }
+    const photoToSave = profilePhoto || "/blankprofile.jpg";
+
     let student = {
-        firstname: this.state.firstname,
-        lastname: this.state.lastname,
-        campusId: this.state.campusId
+      firstname,
+      lastname,
+      email,
+      gpa,
+      campusId,
+      profilePhoto: photoToSave,
     };
     
     // Add new student in back-end database
     let newStudent = await this.props.addStudent(student);
 
-    // Update state, and trigger redirect to show the new student
+    console.log("right after error occurs");
+    console.log(newStudent)
+
+    //update state
     this.setState({
       firstname: "", 
       lastname: "", 
-      campusId: null, 
+      email: "",
+      gpa: "",
+      campusId: "", 
+      profilePhoto: "",
       redirect: true, 
-      redirectId: newStudent.id
+      redirectId: newStudent.id,
+      errors: {}
     });
   }
 
@@ -74,12 +136,23 @@ class NewStudentContainer extends Component {
         <Header />
         <NewStudentView 
           handleChange = {this.handleChange} 
-          handleSubmit={this.handleSubmit}      
+          handleSubmit={this.handleSubmit}   
+          errors={this.state.errors} 
+          allCampuses={this.props.allCampuses} 
+          selectedCampusId={this.state.campusId} 
         />
-      </div>          
+      </div>   
+             
     );
+    
   }
 }
+
+const mapState = (state) => {
+  return {
+    allCampuses: state.allCampuses,  //dropdown menu - copied over from allcampusescontainer
+  };
+};  
 
 // The following input argument is passed to the "connect" function used by "NewStudentContainer" component to connect to Redux Store.
 // The "mapDispatch" argument is used to dispatch Action (Redux Thunk) to Redux Store.
@@ -87,10 +160,17 @@ class NewStudentContainer extends Component {
 const mapDispatch = (dispatch) => {
     return({
         addStudent: (student) => dispatch(addStudentThunk(student)),
+        fetchAllCampuses: () => dispatch(fetchAllCampusesThunk()),
+        checkEmailExists: (email) => dispatch(checkEmailExistsThunk(email))
     })
 }
+
+NewStudentContainer.propTypes = {
+  allCampuses: PropTypes.array.isRequired,
+  fetchAllCampuses: PropTypes.func.isRequired,
+};
 
 // Export store-connected container by default
 // NewStudentContainer uses "connect" function to connect to Redux Store and to read values from the Store 
 // (and re-read the values when the Store State updates).
-export default connect(null, mapDispatch)(NewStudentContainer);
+export default connect(mapState, mapDispatch)(NewStudentContainer);
