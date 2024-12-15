@@ -8,8 +8,9 @@ If needed, it also defines the component's "connect" function.
 import Header from './Header';
 import React, { Component } from "react";
 import { connect } from "react-redux";
-import { fetchStudentThunk } from "../../store/thunks";
+import { fetchStudentThunk, deleteStudentThunk } from "../../store/thunks";
 import { StudentView } from "../views";
+import PropTypes from "prop-types";
 
 class StudentContainer extends Component {
   // Get student data from back-end database
@@ -23,7 +24,10 @@ class StudentContainer extends Component {
     return (
       <div>
         <Header />
-        <StudentView student={this.props.student} />
+        <StudentView 
+          student={this.props.student}
+          deleteStudent={this.props.deleteStudent}
+        />
       </div>
     );
   }
@@ -41,8 +45,14 @@ const mapState = (state) => {
 const mapDispatch = (dispatch) => {
   return {
     fetchStudent: (id) => dispatch(fetchStudentThunk(id)),
+    deleteStudent: (id) => dispatch(deleteStudentThunk(id)),
   };
 };
+
+StudentContainer.propTypes = {
+  deleteStudent: PropTypes.func.isRequired,
+}
+
 
 // Export store-connected container by default
 // StudentContainer uses "connect" function to connect to Redux Store and to read values from the Store 
